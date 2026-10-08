@@ -1,0 +1,4 @@
+[submodule "proposal"]
+	path = proposal
+	url = https://github.com/Goonco/cse590_proposal.git
+	branch = main
