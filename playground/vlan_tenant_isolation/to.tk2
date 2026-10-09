@@ -1,0 +1,57 @@
+enum SW   : Bits[16] = {1, 2}
+enum Port : Bits[16] = {5, 6, 10, 20}
+
+schema Packet {
+    sw       : SW      
+    port     : Port    
+    eth_type : Bits[16]
+    ip_proto : Bits[8] 
+    ip_src   : IPv4    
+    ip_dst   : IPv4    
+    tcp_dst  : Bits[16]
+    vlan     : Bits[12]
+    tenant   : Bits[2] 
+    dscp     : Bits[6] 
+    tagged   : Bool    
+}
+
+// Tenant A is encoded as 1; tenant B is encoded as 2.
+packet ClassifiedA = Packet where {
+    tenant == 1
+    vlan   == 100
+    port   == 10
+}
+
+packet ClassifiedB = Packet where {
+    tenant == 2
+    vlan   == 200
+    port   == 20
+}
+
+// A named union preserves the tenant/VLAN relationship.
+packet Classified = ClassifiedA | ClassifiedB
+
+packet RoutedA = ClassifiedA & {
+    port == Port.5
+}
+
+packet RoutedB = ClassifiedB & {
+    port == Port.6
+}
+
+let classify : Packet -> Classified =
+    (packet.port ~ Port.10; packet.tenant := 1; packet.vlan := 100)
+    +
+    (packet.port ~ Port.20; packet.tenant := 2; packet.vlan := 200)
+in
+
+let egress : Classified -> (RoutedA | RoutedB) =
+    (tenant ~ 1; vlan ~ 100; port := Port.5)
+    +
+    (tenant ~ 2; vlan ~ 200; port := Port.6)
+in
+
+// Inserting `vlan := 200` after classify would violate egress's input
+// contract for tenant A. Restoring the tenant/VLAN relationship before
+// egress would satisfy that contract again.
+sw ~ SW.1; tagged ~ 1; classify; egress

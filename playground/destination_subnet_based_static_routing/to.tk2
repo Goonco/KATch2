@@ -1,0 +1,39 @@
+enum SW   : Bits[16] = {1, 2}
+enum Port : Bits[16] = {1, 2, 3}
+
+schema Packet {
+    sw       : SW      
+    port     : Port    
+    eth_type : Bits[16]
+    ip_proto : Bits[8] 
+    ip_src   : IPv4    
+    ip_dst   : IPv4    
+    tcp_dst  : Bits[16]
+    vlan     : Bits[12]
+    tenant   : Bits[2] 
+    dscp     : Bits[6] 
+    tagged   : Bool    
+}
+
+packet Base = Packet where {
+    sw       == SW.1
+    eth_type == 0x0800
+}
+
+packet Packet1 = Base & {
+    port     == Port.2
+    ip_dst   in 10.10.1.0/24
+}
+
+packet Packet2 = Base & {
+    port     == Port.3
+    ip_dst   in 10.10.2.0/24
+}
+
+let filter_1 = sw ~ SW.1 in
+let filter_2 = eth_type ~ 0x0800 in
+let forwarding_1 = ip_dst ~ 10.10.1.0/24; port := Port.2 in
+let forwarding_2 = ip_dst ~ 10.10.2.0/24; port := Port.3 in
+
+let contract : Packet -> (Packet1 | Packet2) = filter_1; filter_2; (forwarding_1 + forwarding_2)
+contract

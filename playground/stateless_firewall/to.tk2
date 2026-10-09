@@ -1,0 +1,45 @@
+
+
+packet Base = Packet where {
+    sw       == SW.1
+    eth_type == 0x0800
+    ip_proto == 6
+}
+
+packet GuestHTTPS = Base & {
+    ip_src   in 10.10.1.0/24
+    ip_dst   == 10.10.2.10
+    tcp_dst  == 443
+    port     == Port.3
+}
+
+packet AdminSSH = Base & {
+    ip_src   in 10.10.3.0/24
+    ip_dst   == 10.10.2.20
+    tcp_dst  == 22
+    port     == Port.3
+}
+
+let filter_switch = sw ~ SW.1 in
+let filter_ipv4   = eth_type ~ 0x0800 in
+let filter_tcp    = ip_proto ~ 6 in
+
+let guest_https =
+    ip_src ~ 10.10.1.0/24;
+    ip_dst ~ 10.10.2.10;
+    tcp_dst ~ 443;
+    port := Port.3
+in
+
+let admin_ssh =
+    ip_src ~ 10.10.3.0/24;
+    ip_dst ~ 10.10.2.20;
+    tcp_dst ~ 22;
+    port := Port.3
+in
+
+let firewall : Packet -> (GuestHTTPS | AdminSSH) =
+    filter_switch; filter_ipv4; filter_tcp;
+    (guest_https + admin_ssh)
+
+firewall

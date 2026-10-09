@@ -1,0 +1,33 @@
+// VLAN tenant isolation on switch 1 for already-tagged packets.
+// Input port 10 -> tenant A (1), VLAN 100, output port 5.
+// Input port 20 -> tenant B (2), VLAN 200, output port 6.
+// Tenant metadata and VLAN IDs are set from the input port.
+// Packets from other input ports are dropped.
+
+let sw       = &x[0..16] in
+let port     = &x[16..32] in
+let eth_type = &x[32..48] in
+let ip_proto = &x[48..56] in
+let ip_src   = &x[56..88] in
+let ip_dst   = &x[88..120] in
+let tcp_dst  = &x[120..136] in
+let vlan     = &x[136..148] in
+let tenant   = &x[148..150] in
+let dscp     = &x[150..156] in
+let tagged   = &x[156..157] in
+
+let classify =
+    (port ~ 10; tenant := 1; vlan := 100)
+    +
+    (port ~ 20; tenant := 2; vlan := 200)
+in
+
+let egress =
+    (tenant ~ 1; vlan ~ 100; port := 5)
+    +
+    (tenant ~ 2; vlan ~ 200; port := 6)
+in
+
+sw ~ 1; tagged ~ 1; classify; 
+egress
+ 

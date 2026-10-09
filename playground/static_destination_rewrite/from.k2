@@ -1,0 +1,39 @@
+// Static destination translation on switch 1.
+// Service address: 192.0.2.10:443.
+// First client group  -> backend 10.30.0.11:8443 through port 5.
+// Second client group -> backend 10.30.0.12:8443 through port 6.
+// Models client-to-backend request packets.
+
+let sw       = &x[0..16] in
+let port     = &x[16..32] in
+let eth_type = &x[32..48] in
+let ip_proto = &x[48..56] in
+let ip_src   = &x[56..88] in
+let ip_dst   = &x[88..120] in
+let tcp_dst  = &x[120..136] in
+
+let incoming =
+    sw ~ 1;
+    eth_type ~ 0x0800;
+    ip_proto ~ 6;
+    ip_dst ~ 192.0.2.10;
+    tcp_dst ~ 443
+in
+
+let rewrite =
+    (
+        ip_src ~ 10.20.0.0/25;
+        ip_dst := 10.30.0.11;
+        tcp_dst := 8443;
+        port := 5
+    )
+    +
+    (
+        ip_src ~ 10.20.0.128/25;
+        ip_dst := 10.30.0.12;
+        tcp_dst := 8443;
+        port := 6
+    )
+in
+
+incoming; rewrite

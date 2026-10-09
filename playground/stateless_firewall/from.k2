@@ -1,0 +1,42 @@
+// Stateless firewall on switch 1: client-to-server requests.
+// Guest subnet: 10.10.1.0/24 -> web server 10.10.2.10, TCP 443.
+// Admin subnet: 10.10.3.0/24 -> management server 10.10.2.20, TCP 22.
+// Both servers are reachable through output port 3.
+// Packets that match neither rule are dropped.
+
+let sw       = &x[0..16] in
+let port     = &x[16..32] in
+let eth_type = &x[32..48] in
+let ip_proto = &x[48..56] in
+let ip_src   = &x[56..88] in
+let ip_dst   = &x[88..120] in
+let tcp_dst  = &x[120..136] in
+let vlan     = &x[136..148] in
+let tenant   = &x[148..150] in
+let dscp     = &x[150..156] in
+let tagged   = &x[156..157] in
+
+let filter_switch = sw ~ 1 in
+let filter_ipv4   = eth_type ~ 0x0800 in
+let filter_tcp    = ip_proto ~ 6 in
+
+let guest_https =
+    ip_src ~ 10.10.1.0/24;
+    ip_dst ~ 10.10.2.10;
+    tcp_dst ~ 443;
+    port := 3
+in
+
+let admin_ssh =
+    ip_src ~ 10.10.3.0/24;
+    ip_dst ~ 10.10.2.20;
+    tcp_dst ~ 22;
+    port := 3
+in
+
+let firewall =
+    filter_switch; filter_ipv4; filter_tcp;
+    (guest_https + admin_ssh)
+in
+
+firewall
